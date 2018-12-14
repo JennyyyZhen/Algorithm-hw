@@ -52,23 +52,31 @@ public class KdTree {
 			size++;
 		} else {
 			if(!contains(p)) {
-			insert(p, root, true);
+			insert(p, root, true,0,1,0,1);
 			size++;
 			}
 		}
 		
 	}
 
-	private Node insert(Point2D p, Node n, boolean direction) {
+	private Node insert(Point2D p, Node n, boolean direction,double xmin,double xmax,double ymin,double ymax) {
 		if (n == null) {
 			Node newN = new Node(p);
 			newN.vertical = direction;
+			newN.rect=new RectHV(xmin,ymin,xmax,ymax);
 			return newN;
 		}
-		if (direction && p.x() < n.point.x() || !direction && p.y() < n.point.y()) {
-			n.left = insert(p, n.left, !direction);
-		} else {
-			n.right = insert(p, n.right, !direction);
+		if (direction && p.x() < n.point.x()) {
+			n.left = insert(p, n.left, !direction,xmin,n.point.x(),ymin,ymax);
+		} 
+		else if(!direction && p.y() < n.point.y()){
+			n.left = insert(p, n.left, !direction,xmin,xmax,ymin,n.point.y());
+		}
+		else if(direction && p.x() >= n.point.x()) {
+			n.right = insert(p, n.right, !direction,n.point.x(),xmax,ymin,ymax);
+		} 
+		else {
+			n.right = insert(p, n.right, !direction,xmin,xmax,n.point.y(),ymax);
 		}
 		return n;
 	}
@@ -101,7 +109,6 @@ public class KdTree {
 			return;
 		double x=n.point.x();
 		double y=n.point.y();
-		n.rect=new RectHV(xmin,ymin,xmax,ymax);
 		StdDraw.setPenColor(Color.BLACK);
 		StdDraw.filledCircle(x,y,0.01);
 		if(n.vertical) {
@@ -166,7 +173,6 @@ public class KdTree {
 		if (p == null) {
 			throw new java.lang.IllegalArgumentException();
 		}
-		draw();
 		double[] minDistance = new double[] { Double.MAX_VALUE };
 		Point2D[] minP = new Point2D[1];
 		nearest(root, minP, minDistance, p);
@@ -181,11 +187,11 @@ public class KdTree {
 			minP[0] = n.point;
 			minDistance[0] = distance;
 		}
-		//System.out.println(n.point+""+minP[0]);
 		if (n.vertical) {
 			if (p.x() < n.point.x()) {
+				nearest(n.left,minP,minDistance,p);
 				if (n.right!=null && minDistance[0] > n.right.rect.distanceTo(p)) {
-					nearest(n.left,minP,minDistance,p);
+					
 					nearest(n.right, minP, minDistance, p);
 				}
 			} else {
@@ -218,14 +224,15 @@ public class KdTree {
 			double x=StdIn.readDouble();
 			double y=StdIn.readDouble();
 			kt.insert(new Point2D(x,y));
+	        
 		}
 		//kt.insert(new Point2D(0, 0.375));
 		//kt.insert(new Point2D(0.375, 0.625));
 		RectHV rect = new RectHV(0.063, 0.214, 0.483, 0.63);
-		kt.draw();
-		Point2D p= new Point2D(1.0,0.375);
+		Point2D p= new Point2D(0.35,0.44);
 		StdDraw.filledCircle(p.x(),p.y(),0.01);
 		System.out.println(kt.nearest(p));
+		kt.draw();
 		
 		for (Point2D q : kt.range(rect)) {
 			//System.out.println(q);
