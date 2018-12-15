@@ -1,128 +1,88 @@
-//package coursera;
+package coursera;
 
-public class Percolation {
-	private int n;
-	private int openSites;
-	private int[] size;
-	private int[] connection;
+import edu.princeton.cs.algs4.StdOut;
+import edu.princeton.cs.algs4.StdRandom;
+import edu.princeton.cs.algs4.StdStats;
 
-	public Percolation(int n) { // create n-by-n grid, with all sites blocked
-		if (n <= 0) {
-			throw new IllegalArgumentException();
+public class PercolationStats {
+
+	private double[] thresholds;
+	private int trials;
+	private int size;
+	private final double mean;
+	private final double stddev;
+	private final double confL;
+	private final double confH;
+
+	// perform T independent computational experiments on an N-by-N grid
+	public PercolationStats(int N, int T) {
+		if (N <= 0)
+			throw new java.lang.IllegalArgumentException("N is out of bounds");
+		if (T <= 0)
+			throw new java.lang.IllegalArgumentException("T is out of bounds");
+
+		this.size = N;
+		this.trials = T;
+		this.thresholds = new double[trials];
+
+		for (int i = 0; i < T; i++) {
+			thresholds[i] = findThreshold();
 		}
-		this.n = n;
-		this.size = new int[n * n + 1];
-		this.connection = new int[n * n + 1];
-		this.openSites = 0;
+		this.mean=StdStats.mean(thresholds);
+		if (trials == 1)
+			this.stddev=Double.NaN;
+		else
+			this.stddev=StdStats.stddev(thresholds);
+		this.confL=mean - 1.96 * stddev / Math.sqrt(trials);
+		this.confH=mean + 1.96 * stddev / Math.sqrt(trials);
 	}
 
-	public void open(int row, int col) { // open site (row, col) if it is not open already
-		if (row < 1 || col < 1 || row > n || col > n) {
-			throw new java.lang.IllegalArgumentException();
-		}
-		if(isOpen(row,col)) return;
-		int index = (row - 1) * n + col - 1;
-		size[index] = 1;
-		connection[index] = index;
-		if (row == 1)
-			connection[index] = n * n;
-		if (row - 1 >= 1 && isOpen(row - 1, col)) {
-			union(index, index - n);
-		}
-		if (row + 1 <= n && isOpen(row + 1, col)) {
-			union(index, index + n);
-		}
-		if (col - 1 >= 1 && isOpen(row, col - 1)) {
-			union(index, index - 1);
-		}
-		if (col + 1 <= n && isOpen(row, col + 1)) {
-			union(index, index + 1);
-		}
-		openSites++;
-		// System.out.println(row+" "+col+" "+connection[index]);
+	// sample mean of percolation threshold
+	public double mean() {
+		return mean;
 	}
 
-	private void union(int index1, int index2) {
-		if (root(index1) == n * n) {
-			connection[root(index2)] = n * n;
-			return;
+	// sample standard deviation of percolation threshold
+	public double stddev() {
+		
+		return stddev;
+	}
+
+	// returns lower bound of the 95% confidence interval
+	public double confidenceLo() {
+		
+		return confL;
+	}
+
+	// returns upper bound of the 95% confidence interval
+	public double confidenceHi() {
+		
+		return confH;
+	}
+
+	private double findThreshold() {
+		Percolation perc = new Percolation(size);
+		int i, j;
+		int count = 0;
+		while (!perc.percolates()) {
+			do {
+				i = StdRandom.uniform(size) + 1;
+				j = StdRandom.uniform(size) + 1;
+			} while (perc.isOpen(i, j));
+			count++;
+			perc.open(i, j);
 		}
-		if (root(index2) == n * n) {
-			connection[root(index1)] = n * n;
-			return;
-		}
-		if (size[root(index1)] > size[root(index2)]) {
-			size[root(index1)] += size[root(index2)];
-			connection[root(index2)] = connection[root(index1)];
-		} else {
-			size[root(index2)] += size[root(index1)];
-			connection[root(index1)] = connection[root(index2)];
-		}
-		// System.out.println(index1+" "+index2+" "+connection[index1]);
+		return count / (Math.pow(size, 2));
 	}
 
-	private int root(int leaf) {
-		if (connection[leaf] == leaf)
-			return leaf;
-		if (connection[leaf] == n * n || connection[leaf] == n * n + 1) {
-			return connection[leaf];
-		} else
-			return root(connection[leaf]);
+	// test client, described below
+	public static void main(String[] args) {
+		int N = Integer.parseInt(args[0]);
+		int T = Integer.parseInt(args[1]);
+		PercolationStats stats = new PercolationStats(N, T);
+		StdOut.printf("mean = %f\n", stats.mean());
+		StdOut.printf("stddev = %f\n", stats.stddev());
+		StdOut.printf("95%% confidence interval = %f, %f\n", stats.confidenceLo(), stats.confidenceHi());
+		stats.confidenceLo();
 	}
-
-	public boolean isOpen(int row, int col) { // is site (row, col) open?
-		if (row < 1 || col < 1 || row > n || col > n) {
-			throw new java.lang.IllegalArgumentException();
-		}
-		row = row - 1;
-		col = col - 1;
-		return !(size[row * n + col] == 0);
-	}
-
-	public boolean isFull(int row, int col) { // is site (row, col) full?
-		if (row < 1 || col < 1 || row > n || col > n) {
-			throw new java.lang.IllegalArgumentException();
-		}
-		if (!isOpen(row, col))
-			return false;
-
-		// addWater();
-		// System.out.println(row+" "+col+" "+ root((row-1)*n+col-1));
-		boolean f = root((row - 1) * n + col - 1) == n * n;
-		return f;
-	}
-
-	public int numberOfOpenSites() { // number of open sites
-		return openSites;
-	}
-
-	public boolean percolates() { // does the system percolate?
-		for(int i=1;i<n;i++) {
-			if(isFull(n,i))
-				return true;
-		}
-		return false;
-	}
-
-	private void addWater() {
-		connection[n * n] = n * n;
-		connection[n * n + 1] = n * n + 1;
-		size[n * n] = 1;
-		size[n * n + 1] = 1;
-		for (int i = 1; i <= n; i++) {
-			if (isOpen(1, i)) {
-				union2(n * n, i - 1);
-			}
-		}
-	}
-
-	private void union2(int node, int index) {
-		connection[root(index)] = node;
-	}
-	/*
-	 * public static void main(String[] args) { // test client (optional)
-	 * Percolation p= new Percolation(3); p.open(1,1); p.open(1,2); p.open(0,1);
-	 * p.open(2,2); p.open(2,0); //System.out.println(p.isOpen(1,1));
-	 * //System.out.println(p.size[4]); System.out.println(p.isFull(2,0)); }
-	 */
 }
