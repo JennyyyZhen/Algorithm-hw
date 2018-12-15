@@ -1,24 +1,26 @@
-package coursera;
+//package coursera;
 
 public class Percolation {
 	private int n;
 	private int openSites;
 	private int[] size;
 	private int[] connection;
-	private boolean percolate;
 
 	public Percolation(int n) { // create n-by-n grid, with all sites blocked
+		if (n <= 0) {
+			throw new IllegalArgumentException();
+		}
 		this.n = n;
 		this.size = new int[n * n + 1];
 		this.connection = new int[n * n + 1];
 		this.openSites = 0;
-		this.percolate = false;
 	}
 
 	public void open(int row, int col) { // open site (row, col) if it is not open already
 		if (row < 1 || col < 1 || row > n || col > n) {
 			throw new java.lang.IllegalArgumentException();
 		}
+		if(isOpen(row,col)) return;
 		int index = (row - 1) * n + col - 1;
 		size[index] = 1;
 		connection[index] = index;
@@ -87,8 +89,6 @@ public class Percolation {
 		// addWater();
 		// System.out.println(row+" "+col+" "+ root((row-1)*n+col-1));
 		boolean f = root((row - 1) * n + col - 1) == n * n;
-		if (f && row == n)
-			percolate = true;
 		return f;
 	}
 
@@ -97,8 +97,11 @@ public class Percolation {
 	}
 
 	public boolean percolates() { // does the system percolate?
-
-		return percolate;
+		for(int i=1;i<n;i++) {
+			if(isFull(n,i))
+				return true;
+		}
+		return false;
 	}
 
 	private void addWater() {
